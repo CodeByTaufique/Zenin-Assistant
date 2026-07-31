@@ -1,0 +1,22 @@
+# Zenin Assistant — Python dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Core AI ──────────────────────────────────────────────────────────────────
+anthropic>=0.25.0          # Claude API client
+
+# ── Web server ───────────────────────────────────────────────────────────────
+aiohttp>=3.9.0             # Async HTTP server + SSE support
+
+# ── System metrics (optional but recommended) ──────────────────────────────
+psutil>=5.9.0              # CPU, RAM, disk, battery info
+
+# ── Optional: Voice (speech-to-text / text-to-speech) ─────────────────────
+# Uncomment if you want voice support (enable_voice: true in config)
+# openai-whisper>=20231117
+# pyttsx3>=2.90
+
+# ── Optional: Weather ─────────────────────────────────────────────────────
+# Uncomment if you set WEATHER_API_KEY
+# aiohttp is already included above for requests
+
+pip~=25.1.1

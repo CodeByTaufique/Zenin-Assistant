@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZENIN — Personal Intelligence System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ══════════════════════════════════════════
+       BASE & TOKENS
+    ══════════════════════════════════════════ */
+    :root {
+      --hud-cyan:     #00d4ff;
+      --hud-cyan-dim: #007a99;
+      --hud-blue:     #0066cc;
+      --hud-orange:   #ff6600;
+      --hud-red:      #ff2244;
+      --hud-green:    #00ff88;
+      --hud-bg:       #010913;
+      --hud-panel:    rgba(0, 30, 60, 0.7);
+      --hud-border:   rgba(0, 212, 255, 0.25);
+      --hud-text:     #c8e8f8;
+      --hud-dim:      rgba(0, 212, 255, 0.4);
+      --glow-sm:      0 0 8px rgba(0,212,255,0.6);
+      --glow-md:      0 0 20px rgba(0,212,255,0.4), 0 0 40px rgba(0,212,255,0.15);
+      --glow-lg:      0 0 40px rgba(0,212,255,0.5), 0 0 80px rgba(0,212,255,0.2);
+      --font-hud:     'Orbitron', monospace;
+      --font-mono:    'Share Tech Mono', monospace;
+      --font-body:    'Rajdhani', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--hud-bg);
+      color: var(--hud-text);
+      font-family: var(--font-body);
+    }
+
+    /* ══════════════════════════════════════════
+       SCANLINE + BACKGROUND EFFECTS
+    ══════════════════════════════════════════ */
+    #bg-layer {
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,80,160,0.25) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 20% 100%, rgba(0,40,100,0.2) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 80% 80%, rgba(0,20,80,0.15) 0%, transparent 60%);
+    }
+
+    #scanlines {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,212,255,0.015) 2px,
+        rgba(0,212,255,0.015) 4px
+      );
+      animation: flicker 8s infinite;
+    }
+
+    @keyframes flicker {
+      0%,95%,100% { opacity: 1; }
+      96% { opacity: 0.92; }
+      97% { opacity: 1; }
+      98% { opacity: 0.96; }
+    }
+
+    /* Grid overlay */
+    #grid-overlay {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ══════════════════════════════════════════
+       LAYOUT
+    ══════════════════════════════════════════ */
+    #app {
+      position: relative; z-index: 2;
+      display: grid;
+      height: 100vh;
+      grid-template-rows: 64px 1fr 100px;
+      grid-template-columns: 260px 1fr 260px;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    /* ══════════════════════════════════════════
+       HEADER BAR
+    ══════════════════════════════════════════ */
+    #header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--hud-border);
+      position: relative;
+    }
+
+    #header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--hud-cyan), transparent);
+      box-shadow: var(--glow-sm);
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 14px;
+    }
+
+    .logo-arc {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--hud-cyan);
+      box-shadow: var(--glow-md), inset var(--glow-sm);
+      display: flex; align-items: center; justify-content: center;
+      animation: pulse-ring 3s ease-in-out infinite;
+      position: relative;
+    }
+
+    .logo-arc::before {
+      content: '';
+      position: absolute; inset: 4px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,212,255,0.4);
+      animation: spin 8s linear infinite;
+    }
+
+    .logo-arc .inner-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--hud-cyan);
+      box-shadow: var(--glow-lg);
+      animation: pulse-core 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%,100% { box-shadow: var(--glow-md); }
+      50%      { box-shadow: var(--glow-lg); }
+    }
+    @keyframes pulse-core {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(1.3); opacity: 0.8; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .logo-text h1 {
+      font-family: var(--font-hud);
+      font-size: 1.3rem;
+      font-weight: 900;
+      letter-spacing: 0.3em;
+      color: var(--hud-cyan);
+      text-shadow: var(--glow-sm);
+    }
+
+    .logo-text p {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--hud-dim);
+      letter-spacing: 0.2em;
+      margin-top: 1px;
+    }
+
+    .header-right {
+      display: flex; align-items: center; gap: 24px;
+    }
+
+    .header-stat {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--hud-dim);
+      letter-spacing: 0.1em;
+    }
+
+    .header-stat span {
+      color: var(--hud-cyan);
+      font-size: 0.8rem;
+    }
+
+    #live-clock {
+      font-family: var(--font-hud);
+      font-size: 1rem;
+      color: var(--hud-cyan);
+      text-shadow: var(--glow-sm);
+      letter-spacing: 0.15em;
+    }
+
+    .status-badge {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      padding: 3px 10px;
+      border: 1px solid var(--hud-green);
+      color: var(--hud-green);
+      letter-spacing: 0.2em;
+      text-shadow: 0 0 8px rgba(0,255,136,0.8);
+      box-shadow: 0 0 12px rgba(0,255,136,0.2);
+      animation: status-blink 4s ease-in-out infinite;
+    }
+
+    @keyframes status-blink {
+      0%,90%,100% { opacity: 1; }
+      95%           { opacity: 0.5; }
+    }
+
+    /* ══════════════════════════════════════════
+       PANELS — shared
+    ══════════════════════════════════════════ */
+    .panel {
+      background: var(--hud-panel);
+      border: 1px solid var(--hud-border);
+      backdrop-filter: blur(8px);
+      position: relative;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,212,255,0.03) 0%, transparent 30%);
+      pointer-events: none;
+    }
+
+    /* Corner decorations */
+    .panel::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 16px; height: 16px;
+      border-top: 2px solid var(--hud-cyan);
+      border-left: 2px solid var(--hud-cyan);
+      box-shadow: -4px -4px 12px rgba(0,212,255,0.3);
+    }
+
+    .panel-corner-br {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 16px; height: 16px;
+      border-bottom: 2px solid var(--hud-cyan);
+      border-right: 2px solid var(--hud-cyan);
+      box-shadow: 4px 4px 12px rgba(0,212,255,0.3);
+    }
+
+    .panel-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--hud-border);
+      font-family: var(--font-hud);
+      font-size: 0.55rem;
+      letter-spacing: 0.3em;
+      color: var(--hud-cyan);
+      text-shadow: var(--glow-sm);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .panel-header .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--hud-cyan);
+      box-shadow: var(--glow-sm);
+      animation: pulse-core 2s ease-in-out infinite;
+    }
+
+    /* ══════════════════════════════════════════
+       LEFT PANEL — System info
+    ══════════════════════════════════════════ */
+    #panel-left {
+      grid-row: 2;
+      grid-column: 1;
+    }
+
+    .sys-metric {
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(0,212,255,0.08);
+    }
+
+    .sys-metric-label {
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      color: var(--hud-dim);
+      letter-spacing: 0.2em;
+      margin-bottom: 4px;
+    }
+
+    .sys-metric-bar {
+      height: 3px;
+      background: rgba(0,212,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 3px;
+    }
+
+    .sys-metric-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--hud-cyan-dim), var(--hud-cyan));
+      border-radius: 2px;
+      box-shadow: 0 0 6px var(--hud-cyan);
+      transition: width 1s ease;
+    }
+
+    .sys-metric-value {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--hud-cyan);
+    }
+
+    .notes-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .note-item {
+      padding: 6px 10px;
+      border: 1px solid rgba(0,212,255,0.1);
+      margin-bottom: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--hud-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .note-item:hover {
+      border-color: var(--hud-cyan);
+      color: var(--hud-cyan);
+      background: rgba(0,212,255,0.05);
+    }
+
+    /* ══════════════════════════════════════════
+       CENTRE — Chat
+    ══════════════════════════════════════════ */
+    #panel-chat {
+      grid-row: 2;
+      grid-column: 2;
+    }
+
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #chat-messages::-webkit-scrollbar { width: 4px; }
+    #chat-messages::-webkit-scrollbar-track { background: transparent; }
+    #chat-messages::-webkit-scrollbar-thumb {
+      background: var(--hud-cyan-dim);
+      border-radius: 2px;
+    }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      animation: msg-in 0.3s ease-out;
+    }
+
+    @keyframes msg-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 28px; height: 28px; flex-shrink: 0;
+      border-radius: 50%;
+      border: 1px solid var(--hud-border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-hud);
+      font-size: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    .message.assistant .msg-avatar {
+      border-color: var(--hud-cyan);
+      color: var(--hud-cyan);
+      box-shadow: var(--glow-sm);
+      background: rgba(0,212,255,0.05);
+    }
+
+    .message.user .msg-avatar {
+      border-color: var(--hud-orange);
+      color: var(--hud-orange);
+      background: rgba(255,102,0,0.05);
+    }
+
+    .msg-bubble {
+      max-width: 75%;
+      padding: 10px 14px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 400;
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+      position: relative;
+    }
+
+    .message.assistant .msg-bubble {
+      background: rgba(0,30,60,0.8);
+      border: 1px solid var(--hud-border);
+      color: var(--hud-text);
+      border-left: 2px solid var(--hud-cyan);
+    }
+
+    .message.user .msg-bubble {
+      background: rgba(255,102,0,0.08);
+      border: 1px solid rgba(255,102,0,0.2);
+      color: var(--hud-text);
+      border-right: 2px solid var(--hud-orange);
+      text-align: right;
+    }
+
+    .msg-time {
+      font-family: var(--font-mono);
+      font-size: 0.5rem;
+      color: var(--hud-dim);
+      margin-top: 4px;
+      letter-spacing: 0.1em;
+    }
+
+    /* Typing cursor */
+    .typing-cursor::after {
+      content: '▋';
+      color: var(--hud-cyan);
+      animation: blink 0.7s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0; }
+    }
+
+    /* Welcome state */
+    #welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 40px;
+    }
+
+    .welcome-ring {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      border: 2px solid rgba(0,212,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+
+    .welcome-ring::before {
+      content: '';
+      position: absolute; inset: 6px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,212,255,0.5);
+      animation: spin 6s linear infinite;
+    }
+
+    .welcome-ring::after {
+      content: '';
+      position: absolute; inset: -8px;
+      border-radius: 50%;
+      border: 1px dashed rgba(0,212,255,0.15);
+      animation: spin 12s linear infinite reverse;
+    }
+
+    .welcome-ring .core {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--hud-cyan) 0%, rgba(0,212,255,0.2) 70%);
+      box-shadow: var(--glow-lg);
+      animation: pulse-core 2s ease-in-out infinite;
+    }
+
+    .welcome-text {
+      text-align: center;
+    }
+
+    .welcome-text h2 {
+      font-family: var(--font-hud);
+      font-size: 1.4rem;
+      color: var(--hud-cyan);
+      letter-spacing: 0.3em;
+      text-shadow: var(--glow-md);
+    }
+
+    .welcome-text p {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--hud-dim);
+      margin-top: 8px;
+      letter-spacing: 0.15em;
+    }
+
+    .quick-commands {
+      display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+      margin-top: 8px;
+    }
+
+    .quick-cmd {
+      padding: 5px 12px;
+      border: 1px solid rgba(0,212,255,0.2);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--hud-dim);
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: all 0.2s;
+    }
+
+    .quick-cmd:hover {
+      border-color: var(--hud-cyan);
+      color: var(--hud-cyan);
+      background: rgba(0,212,255,0.05);
+      box-shadow: var(--glow-sm);
+    }
+
+    /* ══════════════════════════════════════════
+       RIGHT PANEL
+    ══════════════════════════════════════════ */
+    #panel-right {
+      grid-row: 2;
+      grid-column: 3;
+    }
+
+    .history-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(0,212,255,0.06);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--hud-dim);
+      display: flex; gap: 6px; align-items: flex-start;
+      transition: background 0.2s;
+    }
+
+    .history-item:hover { background: rgba(0,212,255,0.03); }
+
+    .history-role {
+      flex-shrink: 0;
+      color: var(--hud-cyan);
+      letter-spacing: 0.1em;
+    }
+
+    .history-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    /* Radar / decorative ring */
+    .radar-container {
+      padding: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .radar {
+      width: 120px; height: 120px;
+      position: relative;
+    }
+
+    .radar svg { width: 100%; height: 100%; }
+
+    .radar-sweep {
+      transform-origin: 60px 60px;
+      animation: sweep 4s linear infinite;
+    }
+
+    @keyframes sweep {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ══════════════════════════════════════════
+       BOTTOM — Input
+    ══════════════════════════════════════════ */
+    #footer {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      border-top: 1px solid var(--hud-border);
+      position: relative;
+    }
+
+    #footer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--hud-cyan), transparent);
+      box-shadow: var(--glow-sm);
+    }
+
+    .input-prefix {
+      font-family: var(--font-hud);
+      font-size: 0.7rem;
+      color: var(--hud-orange);
+      letter-spacing: 0.2em;
+      text-shadow: 0 0 8px rgba(255,102,0,0.6);
+      flex-shrink: 0;
+    }
+
+    #chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--hud-text);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      caret-color: var(--hud-cyan);
+      padding: 8px 0;
+    }
+
+    #chat-input::placeholder {
+      color: rgba(0,212,255,0.2);
+      letter-spacing: 0.1em;
+    }
+
+    .send-btn {
+      background: transparent;
+      border: 1px solid var(--hud-cyan);
+      color: var(--hud-cyan);
+      font-family: var(--font-hud);
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-shadow: var(--glow-sm);
+      box-shadow: inset 0 0 0 rgba(0,212,255,0);
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: rgba(0,212,255,0.1);
+      box-shadow: var(--glow-sm);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .action-btn {
+      background: transparent;
+      border: 1px solid rgba(0,212,255,0.2);
+      color: var(--hud-dim);
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      border-color: var(--hud-orange);
+      color: var(--hud-orange);
+    }
+
+    /* ══════════════════════════════════════════
+       NOTIFICATION TOAST
+    ══════════════════════════════════════════ */
+    #toast {
+      position: fixed;
+      top: 80px; right: 20px;
+      background: var(--hud-panel);
+      border: 1px solid var(--hud-cyan);
+      padding: 10px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--hud-cyan);
+      letter-spacing: 0.1em;
+      box-shadow: var(--glow-md);
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+    }
+
+    #toast.show { transform: translateX(0); }
+
+    /* ══════════════════════════════════════════
+       SCROLLBAR for panels
+    ══════════════════════════════════════════ */
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .scroll-area::-webkit-scrollbar { width: 3px; }
+    .scroll-area::-webkit-scrollbar-thumb {
+      background: rgba(0,212,255,0.2);
+    }
+
+    /* ══════════════════════════════════════════
+       BOOT SEQUENCE
+    ══════════════════════════════════════════ */
+    #boot-screen {
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--hud-bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+    }
+
+    .boot-logo {
+      font-family: var(--font-hud);
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--hud-cyan);
+      letter-spacing: 0.5em;
+      text-shadow: var(--glow-lg);
+      animation: boot-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes boot-pulse {
+      0%,100% { text-shadow: var(--glow-md); }
+      50%      { text-shadow: var(--glow-lg); }
+    }
+
+    .boot-line {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--hud-dim);
+      letter-spacing: 0.2em;
+      opacity: 0;
+      animation: boot-line-in 0.4s ease forwards;
+    }
+
+    @keyframes boot-line-in {
+      to { opacity: 1; }
+    }
+
+    .boot-progress {
+      width: 300px; height: 2px;
+      background: rgba(0,212,255,0.1);
+      overflow: hidden;
+    }
+
+    .boot-progress-fill {
+      height: 100%;
+      background: var(--hud-cyan);
+      box-shadow: var(--glow-sm);
+      width: 0%;
+      animation: boot-fill 2.5s ease forwards;
+    }
+
+    @keyframes boot-fill {
+      to { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Boot screen -->
+<div id="boot-screen">
+  <div class="boot-logo">ZENIN</div>
+  <div class="boot-line" style="animation-delay:0.3s">PERSONAL INTELLIGENCE SYSTEM v2.0</div>
+  <div class="boot-line" style="animation-delay:0.7s">INITIALISING CORE SYSTEMS …</div>
+  <div class="boot-progress" style="margin-top:12px">
+    <div class="boot-progress-fill"></div>
+  </div>
+  <div class="boot-line" style="animation-delay:1.5s">NEURAL LINK ESTABLISHED</div>
+  <div class="boot-line" style="animation-delay:2s; color: var(--hud-green)">ALL SYSTEMS ONLINE</div>
+</div>
+
+<!-- Background layers -->
+<div id="bg-layer"></div>
+<div id="scanlines"></div>
+<div id="grid-overlay"></div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Main App -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="logo">
+      <div class="logo-arc">
+        <div class="inner-dot"></div>
+      </div>
+      <div class="logo-text">
+        <h1>ZENIN</h1>
+        <p>PERSONAL INTELLIGENCE SYSTEM</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="header-stat">
+        MODEL <span id="stat-model">—</span>
+      </div>
+      <div class="header-stat">
+        TURNS <span id="stat-turns">0</span>
+      </div>
+      <div id="live-clock">00:00:00</div>
+      <div class="status-badge" id="status-badge">● ONLINE</div>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL -->
+  <aside class="panel" id="panel-left">
+    <div class="panel-corner-br"></div>
+    <div class="panel-header">
+      <span>SYS // METRICS</span>
+      <div class="dot"></div>
+    </div>
+
+    <div class="sys-metric">
+      <div class="sys-metric-label">CPU LOAD</div>
+      <div class="sys-metric-bar"><div class="sys-metric-fill" id="bar-cpu" style="width:0%"></div></div>
+      <div class="sys-metric-value" id="val-cpu">—</div>
+    </div>
+    <div class="sys-metric">
+      <div class="sys-metric-label">MEMORY</div>
+      <div class="sys-metric-bar"><div class="sys-metric-fill" id="bar-ram" style="width:0%"></div></div>
+      <div class="sys-metric-value" id="val-ram">—</div>
+    </div>
+    <div class="sys-metric">
+      <div class="sys-metric-label">CONTEXT WINDOW</div>
+      <div class="sys-metric-bar"><div class="sys-metric-fill" id="bar-ctx" style="width:0%"></div></div>
+      <div class="sys-metric-value" id="val-ctx">0 / 40 TURNS</div>
+    </div>
+    <div class="sys-metric">
+      <div class="sys-metric-label">API STATUS</div>
+      <div class="sys-metric-value" id="val-api" style="color: var(--hud-dim)">—</div>
+    </div>
+
+    <div class="panel-header" style="margin-top:8px">
+      <span>NOTES // VAULT</span>
+      <div class="dot"></div>
+    </div>
+    <div class="notes-list scroll-area" id="notes-list">
+      <div style="padding:8px;font-family:var(--font-mono);font-size:0.6rem;color:var(--hud-dim)">
+        No notes saved.
+      </div>
+    </div>
+  </aside>
+
+  <!-- CHAT PANEL -->
+  <main class="panel" id="panel-chat">
+    <div class="panel-corner-br"></div>
+    <div class="panel-header">
+      <span>ZENIN // INTERFACE</span>
+      <div class="dot"></div>
+    </div>
+
+    <div id="chat-messages">
+      <div id="welcome">
+        <div class="welcome-ring">
+          <div class="core"></div>
+        </div>
+        <div class="welcome-text">
+          <h2>ZENIN ONLINE</h2>
+          <p>AWAITING YOUR DIRECTIVE, BOSS</p>
+        </div>
+        <div class="quick-commands">
+         <div class="quick-cmd" onclick="sendQuick('What is the time and date?')">› TIME</div>
+          <div class="quick-cmd" onclick="sendQuick('Give me a full system status report.')">› SYSTEM STATUS</div>
+          <div class="quick-cmd" onclick="sendQuick('What can you do for me?')">› CAPABILITIES</div>
+          <div class="quick-cmd" onclick="sendQuick('Tell me something interesting.')">› BRIEFING</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel" id="panel-right">
+    <div class="panel-corner-br"></div>
+    <div class="panel-header">
+      <span>RADAR // SCAN</span>
+      <div class="dot"></div>
+    </div>
+
+    <div class="radar-container">
+      <div class="radar">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(0,212,255,0.1)" stroke-width="1"/>
+          <circle cx="60" cy="60" r="40" fill="none" stroke="rgba(0,212,255,0.1)" stroke-width="1"/>
+          <circle cx="60" cy="60" r="24" fill="none" stroke="rgba(0,212,255,0.15)" stroke-width="1"/>
+          <circle cx="60" cy="60" r="8"  fill="none" stroke="rgba(0,212,255,0.3)"  stroke-width="1"/>
+          <line x1="60" y1="4"  x2="60" y2="116" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+          <line x1="4"  y1="60" x2="116" y2="60" stroke="rgba(0,212,255,0.06)" stroke-width="1"/>
+          <g class="radar-sweep">
+            <path d="M60,60 L60,4 A56,56 0 0,1 116,60 Z" fill="url(#sweepGrad)" opacity="0.5"/>
+            <line x1="60" y1="60" x2="60" y2="4" stroke="#00d4ff" stroke-width="1.5"/>
+          </g>
+          <circle cx="60" cy="60" r="3" fill="#00d4ff" opacity="0.8"/>
+          <!-- Random blips -->
+          <circle id="blip1" cx="82" cy="35" r="2" fill="#00ff88" opacity="0" class="blip"/>
+          <circle id="blip2" cx="44" cy="72" r="2" fill="#00d4ff" opacity="0" class="blip"/>
+          <circle id="blip3" cx="90" cy="68" r="1.5" fill="#00ff88" opacity="0" class="blip"/>
+          <defs>
+            <radialGradient id="sweepGrad" cx="60" cy="60" r="56" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panel-header">
+      <span>HISTORY // LOG</span>
+      <div class="dot"></div>
+    </div>
+
+    <div class="scroll-area" id="history-log" style="flex:1">
+      <!-- populated by JS -->
+    </div>
+  </aside>
+
+  <!-- FOOTER / INPUT -->
+  <footer id="footer">
+    <div class="input-prefix">⬡ INPUT</div>
+    <input
+      type="text"
+      id="chat-input"
+      placeholder="Enter directive …"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button class="action-btn" id="btn-clear" title="Clear conversation">CLR</button>
+    <button class="send-btn" id="btn-send">TRANSMIT ›</button>
+  </footer>
+
+</div>
+
+<script>
+  // ── Boot sequence ────────────────────────────────────────────────────────────
+  setTimeout(() => {
+    const boot = document.getElementById('boot-screen');
+    boot.style.transition = 'opacity 0.8s ease';
+    boot.style.opacity = '0';
+    setTimeout(() => boot.remove(), 800);
+  }, 3000);
+
+  // ── Clock ─────────────────────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => String(n).padStart(2,'0')).join(':');
+    document.getElementById('live-clock').textContent = t;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── Radar blip animations ─────────────────────────────────────────────────────
+  function animateBlips() {
+    const blips = document.querySelectorAll('.blip');
+    blips.forEach((b, i) => {
+      setInterval(() => {
+        b.style.opacity = '0.9';
+        setTimeout(() => { b.style.opacity = '0'; }, 800);
+      }, 3000 + i * 1200);
+    });
+  }
+  animateBlips();
+
+  // ── State ──────────────────────────────────────────────────────────────────────
+  let isStreaming = false;
+  let maxTurns = 40;
+
+  // ── API helpers ───────────────────────────────────────────────────────────────
+  const API = {
+    async status()  { return fetch('/api/status').then(r => r.json()).catch(() => null); },
+    async history() { return fetch('/api/history').then(r => r.json()).catch(() => []); },
+    async clear()   { return fetch('/api/clear', { method:'POST' }).then(r => r.json()); },
+    async pin(fact) { return fetch('/api/pin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({fact}) }); },
+    async notes()   { return fetch('/api/notes').then(r => r.json()).catch(() => ({ notes: [] })); },
+  };
+
+  // ── Status polling ────────────────────────────────────────────────────────────
+  async function refreshStatus() {
+    const s = await API.status();
+    if (!s) return;
+
+    document.getElementById('stat-model').textContent = (s.model || '—').split('-').slice(0,2).join('-').toUpperCase();
+    document.getElementById('stat-turns').textContent = s.turns || 0;
+
+    const apiOk = s.api_connected;
+    document.getElementById('val-api').textContent  = apiOk ? 'CONNECTED' : 'DEMO MODE';
+    document.getElementById('val-api').style.color  = apiOk ? 'var(--hud-green)' : 'var(--hud-orange)';
+    document.getElementById('status-badge').textContent = apiOk ? '● ONLINE' : '● DEMO';
+    document.getElementById('status-badge').style.color = apiOk ? 'var(--hud-green)' : 'var(--hud-orange)';
+    document.getElementById('status-badge').style.borderColor = apiOk ? 'var(--hud-green)' : 'var(--hud-orange)';
+
+    // Context usage
+    const turns = s.turns || 0;
+    maxTurns = 40;
+    const pct = Math.min((turns / maxTurns) * 100, 100);
+    document.getElementById('bar-ctx').style.width = pct + '%';
+    document.getElementById('val-ctx').textContent  = `${turns} / ${maxTurns} TURNS`;
+
+    // Animate CPU/RAM bars for visual interest (placeholder)
+    const cpuPct = Math.floor(Math.random() * 30 + 5);
+    const ramPct = Math.floor(Math.random() * 40 + 20);
+    document.getElementById('bar-cpu').style.width = cpuPct + '%';
+    document.getElementById('val-cpu').textContent  = cpuPct + '%';
+    document.getElementById('bar-ram').style.width = ramPct + '%';
+    document.getElementById('val-ram').textContent  = ramPct + '%  USED';
+  }
+
+  // ── Notes ─────────────────────────────────────────────────────────────────────
+  async function refreshNotes() {
+    const data = await API.notes();
+    const list = document.getElementById('notes-list');
+    if (!data.notes || data.notes.length === 0) {
+      list.innerHTML = '<div style="padding:8px;font-family:var(--font-mono);font-size:0.6rem;color:var(--hud-dim)">No notes saved.</div>';
+      return;
+    }
+    list.innerHTML = data.notes.map(t =>
+      `<div class="note-item">› ${t}</div>`
+    ).join('');
+  }
+
+  // ── History log ───────────────────────────────────────────────────────────────
+  async function refreshHistory() {
+    const msgs = await API.history();
+    const log = document.getElementById('history-log');
+    if (!msgs.length) { log.innerHTML = ''; return; }
+    log.innerHTML = msgs.slice(-20).map(m => `
+      <div class="history-item">
+        <span class="history-role">${m.role === 'user' ? 'YOU' : 'ZEN'}</span>
+        <span class="history-content">${escHtml(m.content)}</span>
+      </div>
+    `).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────────
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput    = document.getElementById('chat-input');
+  const btnSend      = document.getElementById('btn-send');
+  const btnClear     = document.getElementById('btn-clear');
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function nowTime() {
+    const d = new Date();
+    return [d.getHours(), d.getMinutes()].map(n => String(n).padStart(2,'0')).join(':');
+  }
+
+  function removeWelcome() {
+    const w = document.getElementById('welcome');
+    if (w) w.remove();
+  }
+
+  function appendMessage(role, content = '', streaming = false) {
+    removeWelcome();
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatar = role === 'assistant' ? 'ZEN' : 'YOU';
+    div.innerHTML = `
+      <div class="msg-avatar">${avatar}</div>
+      <div>
+        <div class="msg-bubble ${streaming ? 'typing-cursor' : ''}" id="bubble-${Date.now()}">${escHtml(content)}</div>
+        <div class="msg-time">${nowTime()}</div>
+      </div>
+    `;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const bubble = div.querySelector('.msg-bubble');
+    return { div, bubble };
+  }
+
+  async function sendMessage(text) {
+    if (!text || isStreaming) return;
+    isStreaming = true;
+    btnSend.disabled = true;
+
+    appendMessage('user', text);
+
+    const { bubble } = appendMessage('assistant', '', true);
+    bubble.classList.add('typing-cursor');
+    let full = '';
+
+    try {
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const reader = resp.body.getReader();
+      const dec    = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') { break; }
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.token) {
+              full += parsed.token;
+              bubble.innerHTML = escHtml(full);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      bubble.innerHTML = `⚠ Could not reach Zenin server. Is it running? (${e.message})`;
+    } finally {
+      bubble.classList.remove('typing-cursor');
+      isStreaming = false;
+      btnSend.disabled = false;
+      refreshStatus();
+      refreshHistory();
+      chatInput.focus();
+    }
+  }
+
+  function sendQuick(text) {
+    chatInput.value = text;
+    sendMessage(text);
+    chatInput.value = '';
+  }
+
+  btnSend.addEventListener('click', () => {
+    const text = chatInput.value.trim();
+    chatInput.value = '';
+    sendMessage(text);
+  });
+
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      chatInput.value = '';
+      sendMessage(text);
+    }
+  });
+
+  btnClear.addEventListener('click', async () => {
+    await API.clear();
+    chatMessages.innerHTML = '';
+    chatMessages.innerHTML = `
+      <div id="welcome">
+        <div class="welcome-ring"><div class="core"></div></div>
+        <div class="welcome-text">
+          <h2>SESSION CLEARED</h2>
+          <p>AWAITING YOUR NEXT DIRECTIVE</p>
+        </div>
+      </div>
+    `;
+    showToast('CONVERSATION CLEARED');
+    refreshStatus();
+    refreshHistory();
+  });
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+  setTimeout(async () => {
+    await refreshStatus();
+    await refreshNotes();
+    await refreshHistory();
+    setInterval(refreshStatus, 5000);
+    setInterval(refreshNotes,  10000);
+    chatInput.focus();
+  }, 3200);
+</script>
+</body>
+</html>
